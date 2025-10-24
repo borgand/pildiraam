@@ -12,7 +12,11 @@
     "test:coverage": "jest --coverage",
     "lint": "tsc --noEmit"
   },
-  "keywords": ["icloud", "photo-frame", "slideshow"],
+  "keywords": [
+    "icloud",
+    "photo-frame",
+    "slideshow"
+  ],
   "author": "Pildiraam Team",
   "license": "MIT",
   "type": "commonjs",
@@ -26,6 +30,7 @@
     "icloud-shared-album": "^1.2.1"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.9.1",
