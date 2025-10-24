@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  pildiraam:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pildiraam
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - IMAGE_CACHE_DIR=/app/cache/images
+      - CACHE_CLEANUP_INTERVAL_MINUTES=1440
+      - RATE_LIMIT_WINDOW_MS=300000
+      - RATE_LIMIT_MAX=100
+    volumes:
+      - ./cache/images:/app/cache/images
+      - /app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    # Resource limits for cheap cloud hosting
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

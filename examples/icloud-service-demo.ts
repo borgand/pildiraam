@@ -3,8 +3,13 @@
  * Shows how to use the iCloud service to fetch and cache albums
  */
 
-import { icloudService, cacheManager } from '../src/backend/icloudService';
+import { iCloudService } from '../src/backend/icloudService';
+import { CacheManager, imageUrlToHash } from '../src/backend/cacheManager';
 import { Logger } from '../src/backend/utils';
+
+// Instantiate services
+const icloudService = new iCloudService();
+const cacheManager = new CacheManager();
 
 /**
  * Main demo function
@@ -12,8 +17,13 @@ import { Logger } from '../src/backend/utils';
 async function demo() {
   console.log('=== iCloud Service Demo ===\n');
 
-  // Example album token - replace with a real one for testing
-  const DEMO_TOKEN = 'B0z5qAGN1JIFd3y'; // Replace with your iCloud shared album token
+  // Get album token from environment variable
+  const DEMO_TOKEN = process.env.ALBUM_TOKEN;
+  if (!DEMO_TOKEN) {
+    console.error('❌ Environment variable ALBUM_TOKEN is not set.');
+    console.error('   Please set ALBUM_TOKEN before running the demo.');
+    process.exit(1);
+  }
 
   console.log('1. Checking cache status...');
   const isStale = await cacheManager.isAlbumCacheStale(DEMO_TOKEN);
@@ -58,7 +68,7 @@ async function demo() {
   // Check if first photo is cached
   if (albumData.photos.length > 0) {
     const firstPhoto = albumData.photos[0];
-    const filename = require('../src/backend/cacheManager').imageUrlToHash(firstPhoto.url);
+    const filename = imageUrlToHash(firstPhoto.url);
     const exists = await cacheManager.imageExists(DEMO_TOKEN, filename);
     console.log(`   First image cached: ${exists ? 'Yes' : 'No'}`);
   }
