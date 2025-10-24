@@ -9,7 +9,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { config } from './config';
-import { Logger, isValidToken, createErrorResponse } from './utils';
+import { Logger, createErrorResponse } from './utils';
 
 // Initialize Express app
 const app = express();
@@ -70,6 +70,12 @@ const publicPath = path.join(__dirname, '../../public');
 app.use(express.static(publicPath));
 
 /**
+ * Import Routes
+ */
+import albumRoutes from './routes/albumRoutes';
+import healthRoutes from './routes/healthRoutes';
+
+/**
  * Routes
  */
 
@@ -120,112 +126,10 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 /**
- * GET /album/:token - Serve slideshow HTML interface
+ * Mount API Routes
  */
-app.get('/album/:token', (req: Request, res: Response): void => {
-  const { token } = req.params;
-
-  if (!isValidToken(token)) {
-    Logger.warn('Invalid token format', { token });
-    res.status(404).send('Album not found');
-    return;
-  }
-
-  // TODO: Serve slideshow HTML from public directory
-  res.send('Slideshow interface will be implemented here');
-});
-
-/**
- * GET /api/album/:token/metadata - Get album metadata
- */
-app.get('/api/album/:token/metadata', (req: Request, res: Response): void => {
-  const { token } = req.params;
-
-  if (!isValidToken(token)) {
-    res.status(404).json(createErrorResponse('Album not found', 404));
-    return;
-  }
-
-  // TODO: Implement metadata retrieval
-  res.json({ message: 'Metadata endpoint - to be implemented' });
-});
-
-/**
- * GET /api/album/:token/images - Get paginated album images
- */
-app.get('/api/album/:token/images', (req: Request, res: Response): void => {
-  const { token } = req.params;
-
-  if (!isValidToken(token)) {
-    res.status(404).json(createErrorResponse('Album not found', 404));
-    return;
-  }
-
-  // TODO: Implement image list retrieval with pagination
-  res.json({ message: 'Images endpoint - to be implemented' });
-});
-
-/**
- * GET /api/album/:token/image/:filename - Serve cached image
- */
-app.get('/api/album/:token/image/:filename', (req: Request, res: Response): void => {
-  const { token } = req.params;
-
-  if (!isValidToken(token)) {
-    res.status(404).send('Not found');
-    return;
-  }
-
-  // TODO: Implement image serving from disk cache
-  res.status(501).send('Image serving - to be implemented');
-});
-
-/**
- * GET /api/album/:token/weather - Get weather overlay data
- */
-app.get('/api/album/:token/weather', (req: Request, res: Response): void => {
-  const { token } = req.params;
-
-  if (!isValidToken(token)) {
-    res.status(404).json(createErrorResponse('Album not found', 404));
-    return;
-  }
-
-  if (!config.WEATHER_API_KEY) {
-    res.status(503).json(createErrorResponse('Weather service not configured', 503));
-    return;
-  }
-
-  // TODO: Implement weather API integration
-  res.json({ message: 'Weather endpoint - to be implemented' });
-});
-
-/**
- * POST /api/album/:token/refresh - Force manual album refresh
- */
-app.post('/api/album/:token/refresh', (req: Request, res: Response): void => {
-  const { token } = req.params;
-
-  if (!isValidToken(token)) {
-    res.status(404).json(createErrorResponse('Album not found', 404));
-    return;
-  }
-
-  // TODO: Implement manual refresh trigger
-  res.json({ message: 'Refresh endpoint - to be implemented' });
-});
-
-/**
- * GET /api/health - Health check endpoint
- */
-app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: config.NODE_ENV,
-  });
-});
+app.use('/', albumRoutes);
+app.use('/api', healthRoutes);
 
 /**
  * 404 Handler
@@ -250,15 +154,13 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 /**
  * Start Server
  */
-if (require.main === module) {
-  app.listen(config.PORT, () => {
-    Logger.info('Pildiraam server started', {
-      port: config.PORT,
-      environment: config.NODE_ENV,
-      cacheDir: config.IMAGE_CACHE_DIR,
-    });
+app.listen(config.PORT, () => {
+  Logger.info('Pildiraam server started', {
+    port: config.PORT,
+    environment: config.NODE_ENV,
+    cacheDir: config.IMAGE_CACHE_DIR,
   });
-}
+});
 
 // Export app for testing
 export default app;

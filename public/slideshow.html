@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Pildiraam - Digital Photo Frame</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Minimal inline styles for immediate display */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      overflow: hidden;
+    }
+    #app {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+    .loading h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .loading p {
+      font-size: 16px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="loading">
+      <h1>Loading Album...</h1>
+      <p>Please wait while we fetch your photos</p>
+    </div>
+  </div>
+
+  <script>
+    // ES5-compatible JavaScript for iOS 9 Safari support
+
+    // Extract album token from URL path
+    // URL format: /album/:token
+    var pathParts = window.location.pathname.split('/');
+    var albumToken = pathParts[2] || '';
+
+    // Parse URL parameters for configuration
+    var urlParams = {};
+    var search = window.location.search.substring(1);
+    if (search) {
+      var pairs = search.split('&');
+      for (var i = 0; i < pairs.length; i++) {
+        var pair = pairs[i].split('=');
+        urlParams[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+      }
+    }
+
+    // Configuration from URL parameters
+    var config = {
+      token: albumToken,
+      interval: parseInt(urlParams.interval || '15', 10),
+      fullscreen: urlParams.fullscreen === 'true',
+      weather: urlParams.weather === 'true',
+      clock: urlParams.clock === 'true'
+    };
+
+    // Validate interval range (5-300 seconds)
+    if (config.interval < 5) config.interval = 5;
+    if (config.interval > 300) config.interval = 300;
+
+    // Make config globally available for slideshow.js
+    window.PILDIRAAM_CONFIG = config;
+
+    console.log('Pildiraam initialized', config);
+  </script>
+
+  <!-- Main slideshow script (to be implemented) -->
+  <script src="/slideshow.js"></script>
+</body>
+</html>
