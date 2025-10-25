@@ -46,6 +46,11 @@
     MAX_IMAGE_RETRIES: 1, // Retry failed images once
     imageRetryMap: {}, // Track retry count per image index
     failedImages: {}, // Track permanently failed images (don't retry in future)
+    // Page load retry with exponential backoff
+    pageLoadRetryCount: 0, // Number of retry attempts for page loading
+    pageLoadRetryTimer: null, // Timer for scheduled retry
+    pageLoadRetryDelays: [2000, 5000, 10000, 30000, 60000, 300000], // Delays: 2s, 5s, 10s, 30s, 1m, 5m, then 10m
+    pageLoadRetryPage: 0, // Which page to retry when error recovered
     // Request cancellation on page unload
     pageLoadAbortController: null // AbortController for page fetch requests
   };
@@ -155,14 +160,9 @@
     // Image detail overlay
     html += '<div class="image-detail-overlay" id="image-detail-overlay"></div>';
 
-    // Error modal
-    html += '<div class="error-modal" id="error-modal" style="display: none;">';
-    html += '  <div class="error-content">';
-    html += '    <h2>Error</h2>';
-    html += '    <p id="error-message"></p>';
-    html += '    <button id="retry-btn" class="retry-btn">Retry</button>';
-    html += '    <button id="close-error-btn" class="close-btn">Close</button>';
-    html += '  </div>';
+    // Error notice (unobtrusive corner notice, replaces modal)
+    html += '<div class="error-notice" id="error-notice" style="display: none;">';
+    html += '  <p id="error-notice-message"></p>';
     html += '</div>';
 
     dom.app.innerHTML = html;
@@ -175,7 +175,7 @@
     dom.nextBtn = document.getElementById('next-btn');
     dom.fullscreenBtn = document.getElementById('fullscreen-btn');
     dom.loadingIndicator = document.getElementById('loading-indicator');
-    dom.errorModal = document.getElementById('error-modal');
+    dom.errorNotice = document.getElementById('error-notice');
     dom.clockOverlay = document.getElementById('clock-overlay');
     dom.weatherOverlay = document.getElementById('weather-overlay');
     dom.imageDetailOverlay = document.getElementById('image-detail-overlay');
@@ -259,18 +259,7 @@
       }
     });
 
-    // Error modal buttons
-    document.getElementById('retry-btn').addEventListener('click', function() {
-      hideError();
-      // Retry loading from the beginning
-      state.loadedPages = 0;
-      state.images = [];
-      state.currentIndex = 0;
-      state.allPagesLoaded = false;
-      loadImagesPage(0);
-    });
-
-    document.getElementById('close-error-btn').addEventListener('click', hideError);
+    // Error notice automatically retries with exponential backoff (no user action needed)
 
     // Fullscreen change detection
     document.addEventListener('fullscreenchange', updateFullscreenState);
@@ -348,13 +337,17 @@
 
         state.loadingNextBatch = false;
         hideLoading();
+        resetPageLoadRetry(); // Success - reset retry counter
+        hideError(); // Hide any previous error notice
 
         if (!data.images || data.images.length === 0) {
           // No more images
           state.allPagesLoaded = true;
 
           if (state.images.length === 0) {
+            // No images loaded yet - this is an error, retry with backoff
             showError('No images found in this album');
+            state.pageLoadRetryPage = page; // Remember which page to retry
           } else {
             console.log('All pages loaded. Total images:', state.images.length);
             // Shuffle images if this is the first load
@@ -411,6 +404,7 @@
           console.error('Failed to load images:', error);
           state.loadingNextBatch = false;
           hideLoading();
+          state.pageLoadRetryPage = page; // Remember which page failed
           showError('Failed to load images: ' + error.message);
         }
       });
@@ -1078,26 +1072,74 @@
   }
 
   /**
-   * Show error modal
+   * Show error notice with automatic retry (unobtrusive corner notice)
+   * Displays message and schedules automatic retry with exponential backoff
    */
   function showError(message) {
     console.error('Error:', message);
 
-    if (dom.errorModal) {
-      var errorMessage = document.getElementById('error-message');
+    if (dom.errorNotice) {
+      var errorMessage = document.getElementById('error-notice-message');
       if (errorMessage) {
-        errorMessage.textContent = message;
+        // Get next retry delay
+        var retryDelay = getNextRetryDelay();
+        var retrySeconds = retryDelay / 1000;
+        errorMessage.textContent = message + ' (retrying in ' + retrySeconds + 's)';
       }
-      dom.errorModal.style.display = 'flex';
+      dom.errorNotice.style.display = 'block';
+    }
+
+    // Schedule automatic retry with exponential backoff
+    schedulePageLoadRetry();
+  }
+
+  /**
+   * Hide error notice
+   */
+  function hideError() {
+    if (dom.errorNotice) {
+      dom.errorNotice.style.display = 'none';
     }
   }
 
   /**
-   * Hide error modal
+   * Get the next retry delay based on retry count
+   * Follows exponential backoff: 2s, 5s, 10s, 30s, 1m, 5m, then 10m forever
    */
-  function hideError() {
-    if (dom.errorModal) {
-      dom.errorModal.style.display = 'none';
+  function getNextRetryDelay() {
+    var delayIndex = Math.min(state.pageLoadRetryCount, state.pageLoadRetryDelays.length - 1);
+    return state.pageLoadRetryDelays[delayIndex];
+  }
+
+  /**
+   * Schedule a page load retry with exponential backoff
+   */
+  function schedulePageLoadRetry() {
+    // Cancel any existing retry timer
+    if (state.pageLoadRetryTimer) {
+      clearTimeout(state.pageLoadRetryTimer);
+    }
+
+    var retryDelay = getNextRetryDelay();
+    console.log('Scheduling page load retry in', retryDelay + 'ms (attempt', state.pageLoadRetryCount + 1 + ')');
+
+    state.pageLoadRetryTimer = setTimeout(function() {
+      console.log('Executing scheduled page load retry (attempt', state.pageLoadRetryCount + 1 + ')');
+      state.pageLoadRetryCount++;
+      hideError();
+      // Retry loading from current page (not from beginning)
+      loadImagesPage(state.pageLoadRetryPage);
+    }, retryDelay);
+  }
+
+  /**
+   * Reset page load retry state (called on success)
+   */
+  function resetPageLoadRetry() {
+    state.pageLoadRetryCount = 0;
+    if (state.pageLoadRetryTimer) {
+      clearTimeout(state.pageLoadRetryTimer);
+      state.pageLoadRetryTimer = null;
     }
   }
 

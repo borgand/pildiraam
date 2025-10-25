@@ -253,67 +253,47 @@ body {
 }
 
 /* Error modal */
-.error-modal {
+/* Error notice - unobtrusive corner notification with auto-retry */
+.error-notice {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.error-content {
-  background: #1a1a1a;
-  padding: 40px;
-  border-radius: 10px;
-  max-width: 500px;
-  text-align: center;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-}
-
-.error-content h2 {
-  color: #ff6b6b;
-  margin-bottom: 15px;
-  font-size: 28px;
-}
-
-.error-content p {
-  color: #ccc;
-  margin-bottom: 25px;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.retry-btn,
-.close-btn {
-  background: #4a9eff;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 107, 107, 0.95);
   color: #fff;
-  border: none;
-  padding: 12px 30px;
-  font-size: 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  margin: 0 10px;
-  transition: all 0.3s ease;
+  padding: 15px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 999;
+  max-width: 300px;
+  word-wrap: break-word;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+  animation: slideIn 0.3s ease-out;
 }
 
-.retry-btn:hover,
-.close-btn:hover {
-  background: #3a8ee6;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(74, 158, 255, 0.4);
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.close-btn {
-  background: #666;
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
 }
 
-.close-btn:hover {
-  background: #555;
+.error-notice.hide {
+  animation: slideOut 0.3s ease-in forwards;
 }
 
 /* Notification toast */
