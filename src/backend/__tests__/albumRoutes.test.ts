@@ -8,10 +8,36 @@ import albumRoutes from '../routes/albumRoutes';
 import { icloudService } from '../icloudService';
 import { cacheManager } from '../cacheManager';
 import { AlbumData } from '../types';
+import * as crypto from 'crypto';
 
 // Mock dependencies
 jest.mock('../icloudService');
-jest.mock('../cacheManager');
+jest.mock('../cacheManager', () => {
+  // Get the real imageUrlToHash implementation
+  const actualImageUrlToHash = (url: string): string => {
+    const hash = crypto.createHash('sha256');
+    hash.update(url);
+    const fullHash = hash.digest('hex');
+    return `${fullHash}.jpg`;
+  };
+
+  return {
+    cacheManager: {
+      loadAlbumMetadata: jest.fn(),
+      imageExists: jest.fn(),
+      getImagePath: jest.fn(),
+      saveAlbumMetadata: jest.fn(),
+      ensureCacheDir: jest.fn(),
+      deleteOldAlbums: jest.fn(),
+      getAlbumCacheDir: jest.fn(),
+    },
+    imageUrlToHash: actualImageUrlToHash,
+    isValidImageFile: jest.fn((filename: string) => {
+      // Simple implementation for testing
+      return /^[a-f0-9]{64}\.jpg$/.test(filename);
+    }),
+  };
+});
 
 describe('Album Routes', () => {
   let app: Express;
@@ -200,6 +226,7 @@ describe('Album Routes', () => {
 
       const response = await request(app).get('/api/album/B0z5qAGN1JIFd3y/images');
 
+      console.log('Response body images[0]:', JSON.stringify(response.body.images[0], null, 2));
       expect(response.status).toBe(200);
       expect(response.body.images[0].url).toMatch(/^\/api\/album\/B0z5qAGN1JIFd3y\/image\//);
       expect(response.body.images[0].filename).toMatch(/^[a-f0-9]{64}\.jpg$/);
