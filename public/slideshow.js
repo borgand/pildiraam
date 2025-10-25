@@ -38,7 +38,11 @@
     allPagesLoaded: false,
     lastRefreshCheck: Date.now(),
     imageElements: {}, // Cache of preloaded image elements (rolling window)
-    visibleSlideIndex: 0
+    visibleSlideIndex: 0,
+    // Image loading pool management
+    imageLoadQueue: [], // Queue of {index, element} to load
+    loadingCount: 0, // Current concurrent loads
+    MAX_CONCURRENT_LOADS: 4 // Browser connection pool size
   };
 
   // DOM element cache
@@ -59,7 +63,7 @@
   };
 
   // Constants
-  var IMAGES_PER_PAGE = 20;
+  var IMAGES_PER_PAGE = 50;
   var PRELOAD_WINDOW = 20; // Number of images to keep in memory
   var REFRESH_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
   var WEATHER_UPDATE_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -364,9 +368,16 @@
         state.loadedPages = page + 1;
         state.totalImages = state.images.length;
 
-        // If this is the first page, shuffle and start
+        // Randomize immediately after loading each page
+        // This ensures first page is randomized and avoids repetitive first images
+        console.log('Randomizing page', page, 'with', state.images.length, 'total images');
+        shuffleImages();
+
+        // Re-run prefetch algorithm after randomization to match new order
+        preloadNearbyImages();
+
+        // If this is the first page, start the slideshow
         if (page === 0) {
-          shuffleImages();
           startSlideshow();
         }
 
@@ -397,9 +408,9 @@
   function shuffleImages() {
     console.log('Shuffling', state.images.length, 'images');
 
-    // Use a seeded random for consistent shuffle
-    // Seed based on album token for reproducibility
-    var seed = hashCode(state.token);
+    // Use a seeded random with timestamp for true randomization on each reload
+    // Combines album token + current timestamp to ensure different order each load
+    var seed = hashCode(state.token + Date.now());
 
     function seededRandom() {
       seed = (seed * 9301 + 49297) % 233280;
@@ -496,6 +507,7 @@
 
   /**
    * Get or create a slide element for the given index
+   * Note: img.src is NOT set here - it's queued for pooled loading
    */
   function getOrCreateSlideElement(index) {
     var cacheKey = 'slide-' + index;
@@ -513,14 +525,24 @@
     slideDiv.className = 'slideshow-image';
 
     var img = document.createElement('img');
-    img.src = image.url;
+    // DO NOT SET img.src HERE - it will be set by the pooled loader
     img.alt = image.caption || 'Photo ' + (index + 1);
+    img.dataset.url = image.url; // Store URL for later loading
+    img.dataset.index = index;
 
     // Error handling for image load
     img.onerror = function() {
       console.error('Failed to load image:', image.url);
-      // Show placeholder or skip
       slideDiv.innerHTML = '<div class="image-error">Failed to load image</div>';
+      // Process next item in queue
+      processImageLoadQueue();
+    };
+
+    // Success handler
+    img.onload = function() {
+      console.log('Image loaded:', index + 1);
+      // Process next item in queue
+      processImageLoadQueue();
     };
 
     slideDiv.appendChild(img);
@@ -529,7 +551,55 @@
     // Add to cache
     state.imageElements[cacheKey] = slideDiv;
 
+    // Queue for pooled loading
+    queueImageLoad(index, img);
+
     return slideDiv;
+  }
+
+  /**
+   * Queue an image for pooled loading
+   * Maintains max concurrent connections to browser limit
+   */
+  function queueImageLoad(index, imgElement) {
+    state.imageLoadQueue.push({
+      index: index,
+      element: imgElement
+    });
+
+    console.log('Image queued for loading:', index + 1, '(queue size:', state.imageLoadQueue.length + ')');
+
+    // Start processing queue if not at capacity
+    processImageLoadQueue();
+  }
+
+  /**
+   * Process the image load queue with connection pooling
+   * Respects browser HTTP connection limits by loading max 4 concurrent
+   */
+  function processImageLoadQueue() {
+    // Decrease counter if this is called after a load completes
+    if (state.loadingCount > 0 && arguments.length === 0) {
+      state.loadingCount--;
+    }
+
+    // Load more images if under concurrent limit and queue has items
+    while (state.loadingCount < state.MAX_CONCURRENT_LOADS && state.imageLoadQueue.length > 0) {
+      var loadItem = state.imageLoadQueue.shift();
+      var imgElement = loadItem.element;
+      var imageUrl = imgElement.dataset.url;
+
+      state.loadingCount++;
+
+      console.log('Starting image load:', loadItem.index + 1, '(concurrent:', state.loadingCount + ')');
+
+      // Set src to trigger load - this will call onload or onerror when complete
+      imgElement.src = imageUrl;
+    }
+
+    if (state.imageLoadQueue.length === 0 && state.loadingCount === 0) {
+      console.log('All images loaded');
+    }
   }
 
   /**
