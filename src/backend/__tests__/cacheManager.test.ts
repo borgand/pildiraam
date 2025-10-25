@@ -393,6 +393,14 @@ describe('CacheManager', () => {
 
       await cacheManager.saveAlbumMetadata(oldToken, oldAlbum);
 
+      // Manually update lastAccessed to be old (saveAlbumMetadata always sets it to current time)
+      const oldAlbumDir = cacheManager.getAlbumCacheDir(oldToken);
+      const oldMetadataPath = path.join(oldAlbumDir, 'metadata.json');
+      const oldMetadataContent = await fs.readFile(oldMetadataPath, 'utf-8');
+      const oldMetadata = JSON.parse(oldMetadataContent);
+      oldMetadata.lastAccessed = oldDate.toISOString(); // Set to 3 days ago
+      await fs.writeFile(oldMetadataPath, JSON.stringify(oldMetadata, null, 2), 'utf-8');
+
       // Create recent album
       const recentAlbum: AlbumData = {
         metadata: {
