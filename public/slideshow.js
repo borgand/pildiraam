@@ -386,12 +386,14 @@
           state.allPagesLoaded = true;
           console.log('Last page loaded. Total images:', state.images.length);
         } else {
-          // Preload next page in background
+          // Aggressive background prefetching: Load next page immediately
+          // Use small delay (500ms) to respect rate limits and avoid overwhelming server
           setTimeout(function() {
-            if (!state.allPagesLoaded) {
+            if (!state.allPagesLoaded && !state.loadingNextBatch) {
+              console.log('Starting aggressive prefetch of page', state.loadedPages);
               loadImagesPage(state.loadedPages);
             }
-          }, 2000);
+          }, 500);
         }
       })
       .catch(function(error) {
@@ -647,10 +649,9 @@
     showSlide(state.currentIndex);
     resetSlideTimer();
 
-    // Load next page if approaching end and not all loaded
-    if (!state.allPagesLoaded && state.currentIndex > state.images.length - 10) {
-      loadImagesPage(state.loadedPages);
-    }
+    // Note: Pages are now loaded aggressively in background via loadImagesPage()
+    // This ensures all images are available for randomization before slideshow needs them
+    // No longer loading pages on-demand during slideshow to avoid deterministic ordering
   }
 
   /**
