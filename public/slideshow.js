@@ -40,9 +40,12 @@
     imageElements: {}, // Cache of preloaded image elements (rolling window)
     visibleSlideIndex: 0,
     // Image loading pool management
-    imageLoadQueue: [], // Queue of {index, element} to load
+    imageLoadQueue: [], // Queue of {index, element, retryCount} to load
     loadingCount: 0, // Current concurrent loads
     MAX_CONCURRENT_LOADS: 4, // Browser connection pool size
+    MAX_IMAGE_RETRIES: 1, // Retry failed images once
+    imageRetryMap: {}, // Track retry count per image index
+    failedImages: {}, // Track permanently failed images (don't retry in future)
     // Request cancellation on page unload
     pageLoadAbortController: null // AbortController for page fetch requests
   };
@@ -131,7 +134,6 @@
     html += '  <button id="play-pause-btn" class="control-btn" title="Play/Pause (Space)">&#9208;</button>';
     html += '  <button id="next-btn" class="control-btn" title="Next (Right Arrow)">&#9654;</button>';
     html += '  <button id="fullscreen-btn" class="control-btn" title="Fullscreen (F)">&#9974;</button>';
-    html += '  <div id="counter" class="counter"></div>';
     html += '</div>';
 
     // Loading indicator
@@ -168,7 +170,6 @@
     // Cache newly created DOM elements
     dom.slideshow = document.getElementById('slideshow');
     dom.controls = document.getElementById('controls');
-    dom.counter = document.getElementById('counter');
     dom.playPauseBtn = document.getElementById('play-pause-btn');
     dom.prevBtn = document.getElementById('prev-btn');
     dom.nextBtn = document.getElementById('next-btn');
@@ -543,10 +544,36 @@
     img.dataset.url = image.url; // Store URL for later loading
     img.dataset.index = index;
 
-    // Error handling for image load
+    // Error handling for image load with retry support
     img.onerror = function() {
-      console.error('Failed to load image:', image.url);
-      slideDiv.innerHTML = '<div class="image-error">Failed to load image</div>';
+      console.error('Failed to load image:', image.url, 'index:', index);
+
+      // Skip retry if already marked as permanently failed
+      if (state.failedImages[index]) {
+        console.log('Image already permanently failed, skipping retry:', index);
+        processImageLoadQueue();
+        return;
+      }
+
+      // Check if we should retry
+      var retryCount = state.imageRetryMap[index] || 0;
+      if (retryCount < state.MAX_IMAGE_RETRIES) {
+        // Increment retry count and requeue for retry
+        state.imageRetryMap[index] = retryCount + 1;
+        console.log('Retrying image load - index:', index, 'attempt:', retryCount + 2);
+        queueImageLoad(index, img);
+      } else {
+        // Max retries exceeded - mark as permanently failed and remove from queue
+        console.error('Max retries exceeded for image:', index, '- removing from display');
+        state.failedImages[index] = true;
+        // Remove this image from DOM
+        if (slideDiv.parentNode) {
+          slideDiv.parentNode.removeChild(slideDiv);
+        }
+        // Clean up from cache
+        delete state.imageElements[cacheKey];
+      }
+
       // Process next item in queue
       processImageLoadQueue();
     };
@@ -554,6 +581,8 @@
     // Success handler
     img.onload = function() {
       console.log('Image loaded:', index + 1);
+      // Clear retry count for successful load
+      delete state.imageRetryMap[index];
       // Process next item in queue
       processImageLoadQueue();
     };
@@ -720,9 +749,7 @@
    * Update slide counter
    */
   function updateCounter() {
-    if (dom.counter && state.images.length > 0) {
-      dom.counter.textContent = 'Image ' + (state.currentIndex + 1) + ' of ' + state.images.length;
-    }
+    // Counter is now part of image detail overlay, removed from controls panel
   }
 
   /**
