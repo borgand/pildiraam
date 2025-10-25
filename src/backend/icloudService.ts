@@ -6,7 +6,7 @@
 import axios, { AxiosError } from 'axios';
 import getImages, { ICloud } from 'icloud-shared-album';
 import { AlbumData, AlbumMetadata, AlbumImage } from './types';
-import { Logger } from './utils';
+import { Logger, maskToken } from './utils';
 import { cacheManager, CacheManager, imageUrlToHash } from './cacheManager';
 
 /**
@@ -62,7 +62,7 @@ export class iCloudService {
    */
   async fetchAlbumFromiCloud(token: string): Promise<AlbumData | null> {
     try {
-      Logger.info('Fetching album from iCloud', { token });
+      Logger.info('Fetching album from iCloud', { token: maskToken(token) });
 
       // Set timeout for album fetch
       const controller = new AbortController();
@@ -77,7 +77,7 @@ export class iCloudService {
         clearTimeout(timeoutId);
 
         if (!albumResponse || !albumResponse.photos || !albumResponse.metadata) {
-          Logger.warn('Invalid album response from iCloud', { token });
+          Logger.warn('Invalid album response from iCloud', { token: maskToken(token) });
           return null;
         }
 
@@ -247,7 +247,7 @@ export class iCloudService {
    */
   async syncAlbumWithCache(token: string): Promise<AlbumData | null> {
     try {
-      Logger.info('Starting album synchronization', { token });
+      Logger.info('Starting album synchronization', { token: maskToken(token) });
 
       // Check if cache is stale (default 1440 minutes = 24 hours)
       const isStale = await this.cacheManager.isAlbumCacheStale(token);
@@ -258,7 +258,7 @@ export class iCloudService {
       // If cache is fresh, return it immediately
       if (!isStale && cachedData) {
         Logger.info('Serving from fresh cache', {
-          token,
+          token: maskToken(token),
           photoCount: cachedData.photos.length,
           lastSynced: cachedData.lastSynced,
         });
@@ -268,7 +268,7 @@ export class iCloudService {
 
       // Cache is stale or missing - fetch from iCloud
       Logger.info('Cache is stale or missing, fetching from iCloud', {
-        token,
+        token: maskToken(token),
         isStale,
         hasCachedData: !!cachedData,
       });
@@ -277,12 +277,12 @@ export class iCloudService {
 
       if (!albumData) {
         Logger.error('Failed to fetch album from iCloud', undefined, {
-          token,
+          token: maskToken(token),
         });
         // Return cached data if available, even if stale
         if (cachedData) {
           Logger.warn('Returning stale cache due to iCloud fetch failure', {
-            token,
+            token: maskToken(token),
           });
           return cachedData;
         }
@@ -297,7 +297,7 @@ export class iCloudService {
       );
 
       Logger.info('Images to download determined', {
-        token,
+        token: maskToken(token),
         totalImages: albumData.photos.length,
         toDownload: imagesToDownload.length,
         alreadyCached: albumData.photos.length - imagesToDownload.length,
@@ -312,14 +312,14 @@ export class iCloudService {
       await this.cacheManager.saveAlbumMetadata(token, albumData);
 
       Logger.info('Album synchronization complete', {
-        token,
+        token: maskToken(token),
         photoCount: albumData.photos.length,
         downloadedImages: imagesToDownload.length,
       });
 
       return albumData;
     } catch (error) {
-      Logger.error('Album synchronization failed', error as Error, { token });
+      Logger.error('Album synchronization failed', error as Error, { token: maskToken(token) });
       return null;
     }
   }

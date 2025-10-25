@@ -31,6 +31,22 @@ export function hashAlbumToken(token: string): string {
 }
 
 /**
+ * Masks album token for security logging
+ * Shows first 3 characters, last character, with ... in between
+ * Example: B0z5qAGN1JIFd3y → B0z...3y
+ * @param token - The album token to mask
+ * @returns Masked token string
+ */
+export function maskToken(token: string): string {
+  if (!token || token.length < 4) {
+    return '***';
+  }
+  const first = token.substring(0, 3);
+  const last = token.substring(token.length - 1);
+  return `${first}...${last}`;
+}
+
+/**
  * Logger levels
  */
 export enum LogLevel {

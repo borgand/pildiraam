@@ -7,7 +7,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { AlbumData, AlbumMetadata, AlbumImage } from './types';
-import { Logger } from './utils';
+import { Logger, maskToken } from './utils';
 import { config } from './config';
 
 /**
@@ -77,7 +77,7 @@ export class CacheManager {
       try {
         await fs.access(metadataPath);
       } catch {
-        Logger.debug('Metadata file not found', { token, path: metadataPath });
+        Logger.debug('Metadata file not found', { token: maskToken(token), path: metadataPath });
         return null;
       }
 
@@ -93,14 +93,14 @@ export class CacheManager {
       };
 
       Logger.debug('Album metadata loaded from cache', {
-        token,
+        token: maskToken(token),
         photoCount: albumData.photos.length,
         lastSynced: albumData.lastSynced,
       });
 
       return albumData;
     } catch (error) {
-      Logger.error('Failed to load album metadata', error as Error, { token });
+      Logger.error('Failed to load album metadata', error as Error, { token: maskToken(token) });
       return null;
     }
   }
@@ -134,12 +134,12 @@ export class CacheManager {
       );
 
       Logger.info('Album metadata saved to cache', {
-        token,
+        token: maskToken(token),
         photoCount: data.photos.length,
         path: albumDir,
       });
     } catch (error) {
-      Logger.error('Failed to save album metadata', error as Error, { token });
+      Logger.error('Failed to save album metadata', error as Error, { token: maskToken(token) });
       throw error;
     }
   }
@@ -167,7 +167,7 @@ export class CacheManager {
       try {
         await fs.access(imagePath);
         Logger.debug('Image already cached, skipping write', {
-          token,
+          token: maskToken(token),
           filename,
         });
         return filename;
@@ -178,7 +178,7 @@ export class CacheManager {
       await fs.writeFile(imagePath, imageBuffer);
 
       Logger.debug('Image cached successfully', {
-        token,
+        token: maskToken(token),
         filename,
         size: imageBuffer.length,
       });
@@ -186,7 +186,7 @@ export class CacheManager {
       return filename;
     } catch (error) {
       Logger.error('Failed to cache image', error as Error, {
-        token,
+        token: maskToken(token),
         imageUrl,
       });
       throw error;
@@ -245,7 +245,7 @@ export class CacheManager {
       const isStale = ageMinutes > stalenessMinutes;
 
       Logger.debug('Cache staleness check', {
-        token,
+        token: maskToken(token),
         ageMinutes: Math.round(ageMinutes),
         stalenessMinutes,
         isStale,
@@ -254,7 +254,7 @@ export class CacheManager {
       return isStale;
     } catch (error) {
       Logger.error('Failed to check cache staleness', error as Error, {
-        token,
+        token: maskToken(token),
       });
       return true; // On error, consider stale to trigger refresh
     }
@@ -271,7 +271,7 @@ export class CacheManager {
 
       if (!albumData) {
         Logger.warn('Cannot update access time for non-cached album', {
-          token,
+          token: maskToken(token),
         });
         return;
       }
@@ -279,10 +279,10 @@ export class CacheManager {
       // Re-save metadata with updated lastAccessed timestamp
       await this.saveAlbumMetadata(token, albumData);
 
-      Logger.debug('Album access time updated', { token });
+      Logger.debug('Album access time updated', { token: maskToken(token) });
     } catch (error) {
       Logger.error('Failed to update album access time', error as Error, {
-        token,
+        token: maskToken(token),
       });
       // Don't throw - this is a non-critical operation
     }

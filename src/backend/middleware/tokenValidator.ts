@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { isValidToken, createErrorResponse, Logger } from '../utils';
+import { isValidToken, createErrorResponse, Logger, maskToken } from '../utils';
 
 /**
  * Express middleware that validates album token parameter
@@ -33,7 +33,7 @@ export function validateToken(
 
   if (!isValidToken(token)) {
     Logger.warn('Invalid token format', {
-      token,
+      token: maskToken(token),
       path: req.path,
       ip: req.ip,
     });
@@ -42,6 +42,6 @@ export function validateToken(
   }
 
   // Token is valid, proceed to route handler
-  Logger.debug('Token validated successfully', { token });
+  Logger.debug('Token validated successfully', { token: maskToken(token) });
   next();
 }

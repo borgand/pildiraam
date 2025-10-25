@@ -5,7 +5,7 @@
 
 import { Router, Request, Response } from 'express';
 import * as path from 'path';
-import { Logger, createErrorResponse } from '../utils';
+import { Logger, createErrorResponse, maskToken } from '../utils';
 import { config } from '../config';
 import { icloudService } from '../icloudService';
 import { cacheManager, imageUrlToHash, isValidImageFile } from '../cacheManager';
@@ -21,13 +21,13 @@ const router = Router();
 router.get('/album/:token', validateToken, (req: Request, res: Response): void => {
   const { token } = req.params;
 
-  Logger.info('Serving slideshow interface', { token });
+  Logger.info('Serving slideshow interface', { token: maskToken(token) });
 
   // Serve slideshow HTML from public directory
   const slideshowPath = path.join(__dirname, '../../../public/slideshow.html');
   res.sendFile(slideshowPath, (err) => {
     if (err) {
-      Logger.error('Failed to serve slideshow HTML', err as Error, { token });
+      Logger.error('Failed to serve slideshow HTML', err as Error, { token: maskToken(token) });
       res.status(500).send('Failed to load slideshow interface');
     }
   });
@@ -45,14 +45,14 @@ router.get(
     const { token } = req.params;
 
     try {
-      Logger.debug('Fetching album metadata', { token });
+      Logger.debug('Fetching album metadata', { token: maskToken(token) });
 
       // Load from cache (non-blocking)
       const cachedData = await cacheManager.loadAlbumMetadata(token);
 
       if (!cachedData) {
         // No cache available - return loading state
-        Logger.info('No cached metadata available', { token });
+        Logger.info('No cached metadata available', { token: maskToken(token) });
         res.json({
           status: 'loading',
           message: 'Album is being loaded from iCloud',
@@ -73,14 +73,14 @@ router.get(
       };
 
       Logger.debug('Album metadata served', {
-        token,
+        token: maskToken(token),
         albumName: cachedData.metadata.streamName,
         photoCount: cachedData.metadata.itemsReturned,
       });
 
       res.json(response);
     } catch (error) {
-      Logger.error('Failed to fetch album metadata', error as Error, { token });
+      Logger.error('Failed to fetch album metadata', error as Error, { token: maskToken(token) });
       res.status(500).json(createErrorResponse('Failed to load album metadata', 500));
     }
   }
@@ -104,13 +104,13 @@ router.get(
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
     try {
-      Logger.info('Fetching album images', { token, page, limit });
+      Logger.info('Fetching album images', { token: maskToken(token), page, limit });
 
       // Sync album with cache (cache-first, then iCloud if stale)
       const albumData = await icloudService.syncAlbumWithCache(token);
 
       if (!albumData) {
-        Logger.warn('Failed to sync album', { token });
+        Logger.warn('Failed to sync album', { token: maskToken(token) });
         res.status(404).json(createErrorResponse('Album not found or unavailable', 404));
         return;
       }
@@ -167,7 +167,7 @@ router.get(
       };
 
       Logger.info('Album images served', {
-        token,
+        token: maskToken(token),
         page,
         returned: imagesWithServerUrls.length,
         total,
@@ -176,7 +176,7 @@ router.get(
 
       res.json(response);
     } catch (error) {
-      Logger.error('Failed to fetch album images', error as Error, { token, page });
+      Logger.error('Failed to fetch album images', error as Error, { token: maskToken(token), page });
       res.status(500).json(createErrorResponse('Failed to load album images', 500));
     }
   }
@@ -195,7 +195,7 @@ router.get(
     try {
       // Validate filename format
       if (!isValidImageFile(filename)) {
-        Logger.warn('Invalid image filename format', { token, filename });
+        Logger.warn('Invalid image filename format', { token: maskToken(token), filename });
         res.status(404).send('Not found');
         return;
       }
@@ -204,7 +204,7 @@ router.get(
       const imageExists = await cacheManager.imageExists(token, filename);
 
       if (!imageExists) {
-        Logger.warn('Image not found in cache', { token, filename });
+        Logger.warn('Image not found in cache', { token: maskToken(token), filename });
         res.status(404).send('Not found');
         return;
       }
@@ -219,13 +219,13 @@ router.get(
         'ETag': filename.split('.')[0], // Use hash as ETag
       });
 
-      Logger.debug('Serving cached image', { token, filename });
+      Logger.debug('Serving cached image', { token: maskToken(token), filename });
 
       // Serve image using sendFile for efficient streaming
       res.sendFile(imagePath, (err) => {
         if (err) {
           Logger.error('Failed to serve image', err as Error, {
-            token,
+            token: maskToken(token),
             filename,
           });
           if (!res.headersSent) {
@@ -234,7 +234,7 @@ router.get(
         }
       });
     } catch (error) {
-      Logger.error('Error serving image', error as Error, { token, filename });
+      Logger.error('Error serving image', error as Error, { token: maskToken(token), filename });
       if (!res.headersSent) {
         res.status(500).send('Internal server error');
       }
@@ -255,7 +255,7 @@ router.get(
 
     // Check if weather API is configured
     if (!config.WEATHER_API_KEY) {
-      Logger.debug('Weather API not configured', { token });
+      Logger.debug('Weather API not configured', { token: maskToken(token) });
       res.status(503).json(createErrorResponse('Weather service not configured', 503));
       return;
     }
@@ -270,7 +270,7 @@ router.get(
       lastUpdated: new Date().toISOString(),
     };
 
-    Logger.debug('Weather data served (mock)', { token });
+    Logger.debug('Weather data served (mock)', { token: maskToken(token) });
     res.json(mockWeather);
   }
 );
@@ -286,22 +286,22 @@ router.post(
     const { token } = req.params;
 
     try {
-      Logger.info('Manual refresh requested', { token });
+      Logger.info('Manual refresh requested', { token: maskToken(token) });
 
       // Trigger sync in background (don't await)
       icloudService.syncAlbumWithCache(token).then(
         (result) => {
           if (result) {
             Logger.info('Manual refresh completed', {
-              token,
+              token: maskToken(token),
               photoCount: result.photos.length,
             });
           } else {
-            Logger.error('Manual refresh failed', undefined, { token });
+            Logger.error('Manual refresh failed', undefined, { token: maskToken(token) });
           }
         },
         (error) => {
-          Logger.error('Manual refresh error', error as Error, { token });
+          Logger.error('Manual refresh error', error as Error, { token: maskToken(token) });
         }
       );
 
