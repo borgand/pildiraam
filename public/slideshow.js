@@ -141,10 +141,10 @@
     html += '  <button id="fullscreen-btn" class="control-btn" title="Fullscreen (F)">&#9974;</button>';
     html += '</div>';
 
-    // Loading indicator
+    // Loading indicator (unobtrusive corner notice)
     html += '<div class="loading-indicator" id="loading-indicator" style="display: none;">';
     html += '  <div class="spinner"></div>';
-    html += '  <p>Loading images...</p>';
+    html += '  <span id="loading-indicator-text">Loading images...</span>';
     html += '</div>';
 
     // Clock overlay
