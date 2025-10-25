@@ -42,7 +42,9 @@
     // Image loading pool management
     imageLoadQueue: [], // Queue of {index, element} to load
     loadingCount: 0, // Current concurrent loads
-    MAX_CONCURRENT_LOADS: 4 // Browser connection pool size
+    MAX_CONCURRENT_LOADS: 4, // Browser connection pool size
+    // Request cancellation on page unload
+    pageLoadAbortController: null // AbortController for page fetch requests
   };
 
   // DOM element cache
@@ -79,6 +81,9 @@
       showError('No album token provided');
       return;
     }
+
+    // Initialize AbortController for clean request cancellation on unload
+    state.pageLoadAbortController = new AbortController();
 
     // Cache DOM elements
     dom.app = document.getElementById('app');
@@ -330,7 +335,7 @@
 
     console.log('Fetching images page:', page);
 
-    fetch(url)
+    fetch(url, { signal: state.pageLoadAbortController.signal })
       .then(function(response) {
         if (!response.ok) {
           throw new Error('HTTP ' + response.status + ': ' + response.statusText);
@@ -386,21 +391,27 @@
           state.allPagesLoaded = true;
           console.log('Last page loaded. Total images:', state.images.length);
         } else {
-          // Aggressive background prefetching: Load next page immediately
-          // Use small delay (500ms) to respect rate limits and avoid overwhelming server
+          // Aggressive background prefetching: Load next page in background
+          // Use 1500ms delay to respect rate limits and avoid overwhelming server
+          // Longer delay than image loading pool recovery time to prevent thundering herd
           setTimeout(function() {
             if (!state.allPagesLoaded && !state.loadingNextBatch) {
               console.log('Starting aggressive prefetch of page', state.loadedPages);
               loadImagesPage(state.loadedPages);
             }
-          }, 500);
+          }, 1500);
         }
       })
       .catch(function(error) {
-        console.error('Failed to load images:', error);
-        state.loadingNextBatch = false;
-        hideLoading();
-        showError('Failed to load images: ' + error.message);
+        // Distinguish between abort (page reload) and actual errors
+        if (error.name === 'AbortError') {
+          console.log('Page load cancelled (likely due to page reload)');
+        } else {
+          console.error('Failed to load images:', error);
+          state.loadingNextBatch = false;
+          hideLoading();
+          showError('Failed to load images: ' + error.message);
+        }
       });
   }
 
@@ -1092,6 +1103,10 @@
    * Cleanup on page unload
    */
   window.addEventListener('beforeunload', function() {
+    // Abort pending fetch requests cleanly (prevents EPIPE errors)
+    if (state.pageLoadAbortController) {
+      state.pageLoadAbortController.abort();
+    }
     // Clear all timers
     if (state.slideTimer) clearTimeout(state.slideTimer);
     if (state.weatherTimer) clearInterval(state.weatherTimer);
