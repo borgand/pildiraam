@@ -251,6 +251,28 @@ describe('CacheManager', () => {
       expect(imagePath).toContain(testCacheDir);
       expect(imagePath).toContain(filename);
     });
+
+    it('should return absolute path for Express res.sendFile()', () => {
+      const token = 'pathtoken123456';
+      const filename = 'abc123.jpg';
+
+      const imagePath = cacheManager.getImagePath(token, filename);
+
+      // path.isAbsolute() returns true for absolute paths
+      expect(path.isAbsolute(imagePath)).toBe(true);
+    });
+
+    it('should return absolute path even with relative cache dir', () => {
+      // This simulates the production config where IMAGE_CACHE_DIR is './cache/images'
+      const relativeCacheManager = new CacheManager('./cache/images');
+      const token = 'pathtoken123456';
+      const filename = 'abc123.jpg';
+
+      const imagePath = relativeCacheManager.getImagePath(token, filename);
+
+      // Should still return absolute path
+      expect(path.isAbsolute(imagePath)).toBe(true);
+    });
   });
 
   describe('isAlbumCacheStale', () => {

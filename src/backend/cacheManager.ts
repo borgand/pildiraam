@@ -31,7 +31,10 @@ export class CacheManager {
    * @param cacheDir - Base cache directory path (default from config)
    */
   constructor(cacheDir?: string) {
-    this.cacheDir = cacheDir || config.IMAGE_CACHE_DIR;
+    // Resolve to absolute path to support both relative and absolute paths
+    // path.resolve() converts relative paths to absolute based on cwd
+    const rawCacheDir = cacheDir || config.IMAGE_CACHE_DIR;
+    this.cacheDir = path.resolve(rawCacheDir);
   }
 
   /**
