@@ -139,7 +139,8 @@ router.get(
           url: `/api/album/${token}/image/${filename}`,
           filename: filename,
           dateCreated: photo.dateCreated,
-          caption: photo.caption,
+          caption: photo.caption || null,
+          title: photo.title || null,
         };
       });
 

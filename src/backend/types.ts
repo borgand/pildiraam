@@ -24,6 +24,7 @@ export interface AlbumImage {
   };
   dateCreated?: string;
   caption?: string;
+  title?: string;
 }
 
 /**

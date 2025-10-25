@@ -80,49 +80,16 @@ import healthRoutes from './routes/healthRoutes';
  */
 
 /**
- * GET / - Landing page with instructions
+ * GET / - Landing page with configuration form
  */
 app.get('/', (_req: Request, res: Response) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Pildiraam - Digital Photo Frame</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-          max-width: 800px;
-          margin: 50px auto;
-          padding: 20px;
-          line-height: 1.6;
-        }
-        h1 { color: #333; }
-        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
-        .instructions { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }
-      </style>
-    </head>
-    <body>
-      <h1>Pildiraam - Digital Photo Frame</h1>
-      <div class="instructions">
-        <h2>Getting Started</h2>
-        <p>To view your iCloud shared album as a slideshow, use the following URL format:</p>
-        <p><code>/album/YOUR_ALBUM_TOKEN</code></p>
-        <p>Example: <code>/album/B0z5qAGN1JIFd3y</code></p>
-        <h3>Configuration Options</h3>
-        <p>Add URL parameters to customize the slideshow:</p>
-        <ul>
-          <li><code>?interval=15</code> - Set slide duration in seconds (5-300)</li>
-          <li><code>?fullscreen=true</code> - Start in fullscreen mode</li>
-          <li><code>?weather=true</code> - Show weather overlay</li>
-          <li><code>?clock=true</code> - Show clock overlay</li>
-        </ul>
-      </div>
-      <p><small>Pildiraam v1.0.0 - Running in ${config.NODE_ENV} mode</small></p>
-    </body>
-    </html>
-  `);
+  const indexPath = path.join(__dirname, '../../public/index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      Logger.error('Failed to serve landing page', err as Error);
+      res.status(500).send('Failed to load landing page');
+    }
+  });
 });
 
 /**

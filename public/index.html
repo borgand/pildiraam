@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pildiraam - Digital Photo Frame</title>
+  <style>
+    /* ES5-compatible CSS for iOS 9 Safari support */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 32px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      color: #333;
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s ease;
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 6px;
+      border-radius: 5px;
+      background: #e0e0e0;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #667eea;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: #5568d3;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #667eea;
+      cursor: pointer;
+      border: none;
+    }
+
+    .slider-value {
+      min-width: 80px;
+      text-align: center;
+      font-weight: 600;
+      color: #667eea;
+      font-size: 16px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 25px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .checkbox-item label {
+      margin-bottom: 0;
+      cursor: pointer;
+      font-weight: 400;
+    }
+
+    .start-button {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .start-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .start-button:active {
+      transform: translateY(0);
+    }
+
+    .start-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .instructions {
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 25px;
+    }
+
+    .instructions h3 {
+      color: #333;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .instructions p {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .instructions code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      color: #e83e8c;
+    }
+
+    .error-message {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 30px 20px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Pildiraam</h1>
+    <p class="subtitle">Digital Photo Frame for iCloud Shared Albums</p>
+
+    <div class="instructions">
+      <h3>How to get your Album Token:</h3>
+      <p>1. Open your iCloud Shared Album link (e.g., <code>https://www.icloud.com/sharedalbum/#B0z5qAGN1JIFd3y</code>)</p>
+      <p>2. Copy the token after the <code>#</code> symbol (15 alphanumeric characters)</p>
+      <p>3. Paste it in the field below</p>
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+
+    <form id="config-form">
+      <div class="form-group">
+        <label for="token">iCloud Album Token *</label>
+        <input
+          type="text"
+          id="token"
+          name="token"
+          placeholder="B0z5qAGN1JIFd3y"
+          maxlength="15"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="interval">Image Duration: <span id="interval-value" class="slider-value">15 seconds</span></label>
+        <div class="slider-container">
+          <input
+            type="range"
+            id="interval"
+            name="interval"
+            min="5"
+            max="300"
+            value="15"
+          >
+        </div>
+      </div>
+
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="clock" name="clock">
+          <label for="clock">Show Clock Overlay</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="weather" name="weather">
+          <label for="weather">Show Weather Overlay</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="fullscreen" name="fullscreen">
+          <label for="fullscreen">Start in Fullscreen Mode</label>
+        </div>
+      </div>
+
+      <button type="submit" class="start-button">Start Slideshow</button>
+    </form>
+  </div>
+
+  <script>
+    // ES5-compatible JavaScript for iOS 9 Safari support
+    (function() {
+      'use strict';
+
+      // DOM elements
+      var form = document.getElementById('config-form');
+      var tokenInput = document.getElementById('token');
+      var intervalSlider = document.getElementById('interval');
+      var intervalValue = document.getElementById('interval-value');
+      var clockCheckbox = document.getElementById('clock');
+      var weatherCheckbox = document.getElementById('weather');
+      var fullscreenCheckbox = document.getElementById('fullscreen');
+      var errorMessage = document.getElementById('error-message');
+
+      // Update slider value display
+      function updateSliderValue() {
+        var value = intervalSlider.value;
+        intervalValue.textContent = value + ' second' + (value === '1' ? '' : 's');
+      }
+
+      intervalSlider.addEventListener('input', updateSliderValue);
+      intervalSlider.addEventListener('change', updateSliderValue);
+
+      // Validate album token
+      function validateToken(token) {
+        // Token should be 15 characters, alphanumeric
+        var pattern = /^[A-Za-z0-9]{15}$/;
+        return pattern.test(token);
+      }
+
+      // Show error message
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.className = 'error-message show';
+      }
+
+      // Hide error message
+      function hideError() {
+        errorMessage.className = 'error-message';
+      }
+
+      // Token input validation feedback
+      tokenInput.addEventListener('input', function() {
+        hideError();
+        var token = tokenInput.value.trim();
+        if (token.length > 0 && !validateToken(token)) {
+          if (token.length !== 15) {
+            tokenInput.style.borderColor = '#ff9800';
+          } else {
+            tokenInput.style.borderColor = '#f44336';
+          }
+        } else if (token.length === 15) {
+          tokenInput.style.borderColor = '#4caf50';
+        } else {
+          tokenInput.style.borderColor = '#e0e0e0';
+        }
+      });
+
+      // Form submission
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        hideError();
+
+        // Get form values
+        var token = tokenInput.value.trim();
+        var interval = intervalSlider.value;
+        var showClock = clockCheckbox.checked;
+        var showWeather = weatherCheckbox.checked;
+        var startFullscreen = fullscreenCheckbox.checked;
+
+        // Validate token
+        if (!validateToken(token)) {
+          showError('Invalid album token. Please enter a valid 15-character alphanumeric token.');
+          tokenInput.focus();
+          return;
+        }
+
+        // Build URL with query parameters
+        var url = '/album/' + token + '?interval=' + interval;
+
+        if (showClock) {
+          url += '&clock=true';
+        }
+        if (showWeather) {
+          url += '&weather=true';
+        }
+        if (startFullscreen) {
+          url += '&fullscreen=true';
+        }
+
+        // Navigate to slideshow
+        window.location.href = url;
+      });
+
+      // Initialize slider value
+      updateSliderValue();
+    })();
+  </script>
+</body>
+</html>

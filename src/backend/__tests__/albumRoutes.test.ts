@@ -128,6 +128,8 @@ describe('Album Routes', () => {
         url: `https://example.com/photo${i + 1}.jpg`,
         derivatives: {},
         dateCreated: new Date(`2024-01-${String(i + 1).padStart(2, '0')}T12:00:00Z`).toISOString(),
+        caption: `Caption for photo ${i + 1}`,
+        title: `Photo ${i + 1}`,
       })),
       lastSynced: new Date(),
     };
@@ -201,6 +203,19 @@ describe('Album Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body.images[0].url).toMatch(/^\/api\/album\/B0z5qAGN1JIFd3y\/image\//);
       expect(response.body.images[0].filename).toMatch(/^[a-f0-9]{64}\.jpg$/);
+    });
+
+    it('should include title and caption fields in image response', async () => {
+      (icloudService.syncAlbumWithCache as jest.Mock).mockResolvedValueOnce(mockAlbumData);
+
+      const response = await request(app).get('/api/album/B0z5qAGN1JIFd3y/images');
+
+      expect(response.status).toBe(200);
+      expect(response.body.images[0]).toHaveProperty('title');
+      expect(response.body.images[0]).toHaveProperty('caption');
+      expect(response.body.images[0]).toHaveProperty('dateCreated');
+      expect(response.body.images[0].title).toBe('Photo 25'); // Newest first
+      expect(response.body.images[0].caption).toBe('Caption for photo 25');
     });
 
     it('should sort photos by date (newest first)', async () => {

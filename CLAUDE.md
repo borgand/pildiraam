@@ -259,6 +259,15 @@ A big call to action button prompts the user to start the slideshow.
 - Navigation: Moving back/forth resets the slideshow timer
 - All images loaded via `/api/album/:token/image/:filename` endpoint
 
+**Image Detail Overlay**:
+Image details overlay is displayed bottom left of the screen in a subtle rounded box.
+It is semi-transparent and visible if the clock is shown or when controls are displayed.
+It contains:
+- Image title (if available)
+- Image caption (if available)
+- Date created
+- Image number / total number of images
+
 **Frontend Controls**:
 - **Default Duration**: 15 seconds per image
 - **URL Parameters**:

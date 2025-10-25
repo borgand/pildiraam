@@ -54,7 +54,8 @@
     clockOverlay: null,
     weatherOverlay: null,
     loadingIndicator: null,
-    errorModal: null
+    errorModal: null,
+    imageDetailOverlay: null
   };
 
   // Constants
@@ -140,6 +141,9 @@
       html += '<div class="weather-overlay" id="weather-overlay"></div>';
     }
 
+    // Image detail overlay
+    html += '<div class="image-detail-overlay" id="image-detail-overlay"></div>';
+
     // Error modal
     html += '<div class="error-modal" id="error-modal" style="display: none;">';
     html += '  <div class="error-content">';
@@ -164,6 +168,7 @@
     dom.errorModal = document.getElementById('error-modal');
     dom.clockOverlay = document.getElementById('clock-overlay');
     dom.weatherOverlay = document.getElementById('weather-overlay');
+    dom.imageDetailOverlay = document.getElementById('image-detail-overlay');
   }
 
   /**
@@ -232,6 +237,17 @@
     dom.nextBtn.addEventListener('click', nextSlide);
     dom.playPauseBtn.addEventListener('click', togglePlayPause);
     dom.fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    // Controls hover for image detail overlay
+    dom.controls.addEventListener('mouseenter', function() {
+      updateImageDetailOverlay();
+    });
+
+    dom.controls.addEventListener('mouseleave', function() {
+      if (!config.clock) {
+        hideImageDetailOverlay();
+      }
+    });
 
     // Error modal buttons
     document.getElementById('retry-btn').addEventListener('click', function() {
@@ -473,6 +489,9 @@
 
     // Update counter
     updateCounter();
+
+    // Update image detail overlay
+    updateImageDetailOverlay();
   }
 
   /**
@@ -622,6 +641,98 @@
     if (dom.counter && state.images.length > 0) {
       dom.counter.textContent = 'Image ' + (state.currentIndex + 1) + ' of ' + state.images.length;
     }
+  }
+
+  /**
+   * Update image detail overlay with current image info
+   */
+  function updateImageDetailOverlay() {
+    if (!dom.imageDetailOverlay || state.images.length === 0) {
+      return;
+    }
+
+    var currentImage = state.images[state.currentIndex];
+    if (!currentImage) {
+      return;
+    }
+
+    var html = '';
+
+    // Title (if available)
+    if (currentImage.title) {
+      html += '<div class="image-detail-title">' + escapeHtml(currentImage.title) + '</div>';
+    }
+
+    // Caption (if available)
+    if (currentImage.caption) {
+      html += '<div class="image-detail-caption">' + escapeHtml(currentImage.caption) + '</div>';
+    }
+
+    // Metadata (date and counter)
+    html += '<div class="image-detail-meta">';
+
+    // Date
+    if (currentImage.dateCreated) {
+      var date = new Date(currentImage.dateCreated);
+      var dateStr = formatDate(date);
+      html += '<div class="image-detail-date">' + dateStr + '</div>';
+    }
+
+    // Counter
+    html += '<div class="image-detail-counter">' + (state.currentIndex + 1) + ' / ' + state.images.length + '</div>';
+    html += '</div>';
+
+    dom.imageDetailOverlay.innerHTML = html;
+
+    // Show overlay if clock is visible or controls are hovered
+    if (config.clock) {
+      dom.imageDetailOverlay.className = 'image-detail-overlay visible';
+    }
+  }
+
+  /**
+   * Show image detail overlay
+   */
+  function showImageDetailOverlay() {
+    if (dom.imageDetailOverlay) {
+      dom.imageDetailOverlay.className = 'image-detail-overlay visible';
+    }
+  }
+
+  /**
+   * Hide image detail overlay
+   */
+  function hideImageDetailOverlay() {
+    if (dom.imageDetailOverlay) {
+      dom.imageDetailOverlay.className = 'image-detail-overlay';
+    }
+  }
+
+  /**
+   * Format date for display
+   */
+  function formatDate(date) {
+    var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var day = date.getDate();
+    var month = months[date.getMonth()];
+    var year = date.getFullYear();
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+
+    // Pad with zeros
+    hours = hours < 10 ? '0' + hours : hours;
+    minutes = minutes < 10 ? '0' + minutes : minutes;
+
+    return month + ' ' + day + ', ' + year + ' at ' + hours + ':' + minutes;
+  }
+
+  /**
+   * Escape HTML to prevent XSS
+   */
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**
