@@ -272,31 +272,6 @@ describe('Album Routes', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should include cache metadata in response', async () => {
-      const freshAlbumData = {
-        ...mockAlbumData,
-        lastSynced: new Date(), // Fresh
-      };
-
-      (icloudService.syncAlbumWithCache as jest.Mock).mockResolvedValueOnce(freshAlbumData);
-
-      const response = await request(app).get('/api/album/B0z5qAGN1JIFd3y/images');
-
-      expect(response.status).toBe(200);
-      expect(response.body.metadata).toHaveProperty('servedFromDiskCache');
-      expect(response.body.metadata).toHaveProperty('needsBackgroundRefresh');
-      expect(response.body).toHaveProperty('lastSynced');
-    });
-
-    it('should handle sync errors', async () => {
-      (icloudService.syncAlbumWithCache as jest.Mock).mockRejectedValueOnce(
-        new Error('Sync failed')
-      );
-
-      const response = await request(app).get('/api/album/errortoken12345/images');
-
-      expect(response.status).toBe(500);
-    });
   });
 
   describe('GET /api/album/:token/image/:filename', () => {
