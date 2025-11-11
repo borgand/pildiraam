@@ -17,9 +17,6 @@ examples
 *.md
 .nyc_output
 jest.config.js
-tsconfig.json
-src
-public
 Dockerfile
 docker-compose.yml
 .dockerignore

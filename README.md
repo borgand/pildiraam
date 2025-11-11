@@ -28,68 +28,109 @@ Cache-First Flow:
 4. GET /api/album/:token/image/:filename → Serve from disk (1 year cache)
 ```
 
-## Installation
+## Quick Start
 
-### Prerequisites
-
-- Node.js 20+ (for local development)
-- Docker & Docker Compose (for containerized deployment)
-- iCloud shared album token (15-character alphanumeric string)
-
-### Local Development
+### Docker Compose (Recommended)
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/pildiraam.git
-cd pildiraam
+# Create docker-compose.yml
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+services:
+  pildiraam:
+    image: docker.io/YOUR_USERNAME/pildiraam:latest
+    container_name: pildiraam
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - IMAGE_CACHE_DIR=/cache/images
+      - CACHE_CLEANUP_INTERVAL_MINUTES=1440
+    volumes:
+      - pildiraam-cache:/cache/images
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-# Install dependencies
-npm install
+volumes:
+  pildiraam-cache:
+EOF
 
-# Copy environment template
-cp .env.example .env
-
-# Start development server
-npm run dev
-# Server runs on http://localhost:3000
-```
-
-### Using Docker
-
-```bash
-# Build image
-docker build -t pildiraam:latest .
-
-# Run container
-docker run -p 3000:3000 \
-  -e NODE_ENV=production \
-  -v pildiraam-cache:/app/cache/images \
-  pildiraam:latest
-
-# Or use Docker Compose
+# Start the service
 docker-compose up -d
 ```
 
-## Configuration
+Access at `http://localhost:3000`
 
-Create `.env` file with the following variables:
+### Docker Run
 
 ```bash
-# Server
-PORT=3000                              # Default: 3000
-NODE_ENV=production                    # production | development
+docker run -p 3000:3000 \
+  -e NODE_ENV=production \
+  -v pildiraam-cache:/cache/images \
+  --restart unless-stopped \
+  docker.io/YOUR_USERNAME/pildiraam:latest
+```
 
-# Cache
-IMAGE_CACHE_DIR=./cache/images         # Cache directory path
-CACHE_CLEANUP_INTERVAL_MINUTES=1440    # Cleanup old albums after 24h
+### Unraid
 
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=300000            # 5 minutes
-RATE_LIMIT_MAX=100                     # 100 requests per window
+For Unraid deployments, see [UNRAID_DEPLOYMENT.md](UNRAID_DEPLOYMENT.md) for detailed instructions including:
+- Template configuration with UI volume mapping
+- Docker Compose deployment on Unraid
+- SSH-based setup steps
 
-# Optional
-WEATHER_API_KEY=                       # For weather overlay (stub for now)
-ALLOWED_IPS=                           # Comma-separated IP allowlist
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NODE_ENV` | production | Node environment (production/development) |
+| `PORT` | 3000 | HTTP server port |
+| `IMAGE_CACHE_DIR` | /cache/images | Path inside container for cached images |
+| `CACHE_CLEANUP_INTERVAL_MINUTES` | 1440 | Delete unused albums after N minutes (24h default) |
+| `RATE_LIMIT_WINDOW_MS` | 300000 | Rate limiting window in milliseconds (5 min default) |
+| `RATE_LIMIT_MAX` | 100 | Maximum requests per rate limit window |
+
+### Volume Mounts
+
+**Critical Volume:**
+```
+/cache/images  - Persistent storage for downloaded iCloud images
+```
+
+This directory stores all cached photos from iCloud albums. **Do not lose this volume** - it contains your cached image data. Mount it to a persistent location:
+
+```bash
+# Docker Compose
+volumes:
+  pildiraam-cache:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /path/to/persistent/cache
+
+# Or use named volume (created automatically)
+volumes:
+  pildiraam-cache:
+```
+
+### Local Development
+
+Prerequisites: Node.js 20+
+
+```bash
+git clone https://github.com/yourusername/pildiraam.git
+cd pildiraam
+
+npm install
+npm run dev
+# Server runs on http://localhost:3000
 ```
 
 ## Usage
