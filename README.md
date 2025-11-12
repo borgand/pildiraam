@@ -76,13 +76,6 @@ docker run -p 3000:3000 \
   docker.io/YOUR_USERNAME/pildiraam:latest
 ```
 
-### Unraid
-
-For Unraid deployments, see [UNRAID_DEPLOYMENT.md](UNRAID_DEPLOYMENT.md) for detailed instructions including:
-- Template configuration with UI volume mapping
-- Docker Compose deployment on Unraid
-- SSH-based setup steps
-
 ## Configuration
 
 ### Environment Variables
@@ -298,7 +291,6 @@ MIT License - see LICENSE file for details
 
 For issues and questions:
 - Check [Troubleshooting](#troubleshooting) section
-- Review [docs/](docs/) directory
 - Open GitHub issue with details
 
 ---
