@@ -153,33 +153,6 @@ describe('Health Routes', () => {
       expect(mockedFs.unlink).toHaveBeenCalled();
     });
 
-    it('should handle complete health check failure', async () => {
-      (cacheManager.ensureCacheDir as jest.Mock).mockImplementationOnce(() => {
-        throw new Error('Critical error');
-      });
-
-      const response = await request(app).get('/api/health');
-
-      expect(response.status).toBe(503);
-      expect(response.body.status).toBe('error');
-      expect(response.body.error).toBe('Health check failed');
-    });
-
-    it('should return 503 on critical errors', async () => {
-      // Mock a synchronous error during health check
-      (cacheManager.ensureCacheDir as jest.Mock).mockImplementationOnce(() => {
-        throw new Error('Unexpected sync error');
-      });
-
-      const response = await request(app).get('/api/health');
-
-      expect(response.status).toBe(503);
-      expect(response.body).toMatchObject({
-        status: 'error',
-        error: 'Health check failed',
-      });
-      expect(response.body.timestamp).toBeDefined();
-    });
 
     it('should handle unlink errors gracefully', async () => {
       (cacheManager.ensureCacheDir as jest.Mock).mockResolvedValueOnce(undefined);
@@ -213,17 +186,21 @@ describe('Health Routes', () => {
       expect(response.body.cache).toHaveProperty('status');
     });
 
-    it('should have all required fields in error response', async () => {
-      (cacheManager.ensureCacheDir as jest.Mock).mockImplementationOnce(() => {
-        throw new Error('Error');
-      });
+    it('should have all required fields in degraded response', async () => {
+      (cacheManager.ensureCacheDir as jest.Mock).mockRejectedValueOnce(
+        new Error('Error')
+      );
 
       const response = await request(app).get('/api/health');
 
-      expect(response.status).toBe(503);
+      expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('status');
       expect(response.body).toHaveProperty('timestamp');
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toHaveProperty('uptime');
+      expect(response.body).toHaveProperty('version');
+      expect(response.body).toHaveProperty('environment');
+      expect(response.body).toHaveProperty('cache');
+      expect(response.body.status).toBe('degraded');
     });
   });
 

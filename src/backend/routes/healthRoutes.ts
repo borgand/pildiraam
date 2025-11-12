@@ -17,11 +17,14 @@ const router = Router();
  */
 router.get('/health', async (_req: Request, res: Response): Promise<void> => {
   try {
-    // Check if cache directory exists and is writable (critical check)
+    // Check if cache directory exists and is writable
     let cacheStatus = 'ok';
 
     try {
-      await cacheManager.ensureCacheDir();
+      const result = cacheManager.ensureCacheDir();
+      if (result instanceof Promise) {
+        await result;
+      }
       // Try to write a test file (non-critical - can be degraded)
       const testPath = `${config.IMAGE_CACHE_DIR}/.health_check`;
       try {
@@ -35,7 +38,7 @@ router.get('/health', async (_req: Request, res: Response): Promise<void> => {
         cacheStatus = 'error';
       }
     } catch (dirError) {
-      // Directory check failures are non-critical - treat as degraded not error
+      // Directory check failures are non-critical - treat as degraded
       Logger.warn('Cache directory health check failed', {
         error: (dirError as Error).message,
       });

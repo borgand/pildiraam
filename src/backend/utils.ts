@@ -9,8 +9,8 @@ import * as crypto from 'crypto';
  * @param token - The album token to validate
  * @returns True if token is valid, false otherwise
  */
-export function isValidToken(token: string): boolean {
-  if (!token || typeof token !== 'string') {
+export function isValidToken(token: unknown): boolean {
+  if (typeof token !== 'string' || !token) {
     return false;
   }
   const tokenRegex = /^[a-zA-Z0-9]{15}$/;
@@ -37,8 +37,9 @@ export function hashAlbumToken(token: string): string {
  * @param token - The album token to mask
  * @returns Masked token string
  */
-export function maskToken(token: string): string {
-  if (!token || token.length < 4) {
+export function maskToken(token: unknown): string {
+  // Handle non-string types or tokens that are too short
+  if (typeof token !== 'string' || token.length < 4) {
     return '***';
   }
   const first = token.substring(0, 3);

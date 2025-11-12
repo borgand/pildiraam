@@ -16,6 +16,7 @@ interface iCloudServiceConfig {
   imageDownloadTimeout: number; // Timeout for image downloads in ms
   retryAttempts: number; // Number of retry attempts for failed downloads
   retryBackoff: number[]; // Backoff delays in ms [1000, 2000, 4000]
+  rateLimitBackoff: number; // Backoff multiplier for 429/503 errors in ms
   albumFetchTimeout: number; // Timeout for album fetch in ms
   downloadDelay: number; // Delay between downloads in ms (rate limiting)
   userAgent: string; // User-Agent header for requests
@@ -28,6 +29,7 @@ const DEFAULT_CONFIG: iCloudServiceConfig = {
   imageDownloadTimeout: 10000, // 10 seconds
   retryAttempts: 3,
   retryBackoff: [1000, 2000, 4000], // Exponential backoff
+  rateLimitBackoff: 5000, // 5 second multiplier for 429/503 backoff
   albumFetchTimeout: 15000, // 15 seconds
   downloadDelay: 1000, // 1 second between downloads
   userAgent:
@@ -218,7 +220,8 @@ export class iCloudService {
           });
           lastError = error as Error;
           // Apply extra backoff for rate limiting
-          await this.sleep(5000 * (attempt + 1));
+          const delay = this.config.rateLimitBackoff * (attempt + 1);
+          await this.sleep(delay);
           continue;
         }
 

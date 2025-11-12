@@ -23,22 +23,24 @@ describe('iCloudService', () => {
   let cacheManager: CacheManager;
 
   beforeEach(() => {
-    // Use fake timers to speed up tests with delays
-    jest.useFakeTimers();
-
     // Use a test cache directory
     testCacheDir = path.join(__dirname, `../../..`, `.test-cache-icloud-${Date.now()}`);
     cacheManager = new CacheManager(testCacheDir);
-    service = createiCloudService(undefined, cacheManager);
+    // Use short timeouts for tests (100ms instead of 5000ms for rate limit backoff)
+    service = createiCloudService(
+      {
+        retryBackoff: [100, 100, 100], // 100ms backoff for tests
+        rateLimitBackoff: 100, // 100ms instead of 5000ms for tests
+        downloadDelay: 0, // No delay between downloads in tests
+      },
+      cacheManager
+    );
 
     // Clear all mocks
     jest.clearAllMocks();
   });
 
   afterEach(async () => {
-    // Restore real timers
-    jest.useRealTimers();
-
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true });
@@ -208,12 +210,7 @@ describe('iCloudService', () => {
           data: mockImageData,
         } as any);
 
-      const downloadPromise = service.downloadImage('https://example.com/image.jpg');
-
-      // Fast-forward through retry delays
-      await jest.runAllTimersAsync();
-
-      const result = await downloadPromise;
+      const result = await service.downloadImage('https://example.com/image.jpg');
 
       expect(result).not.toBeNull();
       expect(mockedAxios.get).toHaveBeenCalledTimes(3);
@@ -222,12 +219,7 @@ describe('iCloudService', () => {
     it('should return null after exhausting retries', async () => {
       mockedAxios.get.mockRejectedValue(new Error('Persistent error'));
 
-      const downloadPromise = service.downloadImage('https://example.com/image.jpg');
-
-      // Fast-forward through all retry delays
-      await jest.runAllTimersAsync();
-
-      const result = await downloadPromise;
+      const result = await service.downloadImage('https://example.com/image.jpg');
 
       expect(result).toBeNull();
       expect(mockedAxios.get).toHaveBeenCalledTimes(3); // Default retry attempts
@@ -245,12 +237,7 @@ describe('iCloudService', () => {
           data: mockImageData,
         } as any);
 
-      const downloadPromise = service.downloadImage('https://example.com/image.jpg');
-
-      // Fast-forward through retry delays
-      await jest.runAllTimersAsync();
-
-      const result = await downloadPromise;
+      const result = await service.downloadImage('https://example.com/image.jpg');
 
       expect(result).not.toBeNull();
       expect(mockedAxios.get).toHaveBeenCalledTimes(2);
@@ -261,12 +248,7 @@ describe('iCloudService', () => {
         response: { status: 503 },
       } as any);
 
-      const downloadPromise = service.downloadImage('https://example.com/image.jpg');
-
-      // Fast-forward through retry delays
-      await jest.runAllTimersAsync();
-
-      const result = await downloadPromise;
+      const result = await service.downloadImage('https://example.com/image.jpg');
 
       expect(result).toBeNull();
     });
@@ -277,12 +259,7 @@ describe('iCloudService', () => {
         data: null,
       } as any);
 
-      const downloadPromise = service.downloadImage('https://example.com/notfound.jpg');
-
-      // Fast-forward through potential retry delays
-      await jest.runAllTimersAsync();
-
-      const result = await downloadPromise;
+      const result = await service.downloadImage('https://example.com/notfound.jpg');
 
       expect(result).toBeNull();
     });
@@ -521,12 +498,7 @@ describe('iCloudService', () => {
     it('should handle network timeout gracefully', async () => {
       mockedAxios.get.mockRejectedValue({ code: 'ECONNABORTED' });
 
-      const downloadPromise = service.downloadImage('https://timeout.example.com/image.jpg');
-
-      // Fast-forward through retry delays
-      await jest.runAllTimersAsync();
-
-      const result = await downloadPromise;
+      const result = await service.downloadImage('https://timeout.example.com/image.jpg');
 
       expect(result).toBeNull();
     });
@@ -596,7 +568,7 @@ describe('iCloudService', () => {
         ],
       } as any);
 
-      // First download fails (exhaust all retries), second succeeds
+      // First image download fails all 3 retries, second image succeeds
       mockedAxios.get
         .mockRejectedValueOnce(new Error('Download failed'))
         .mockRejectedValueOnce(new Error('Download failed'))
@@ -604,17 +576,16 @@ describe('iCloudService', () => {
         .mockResolvedValueOnce({
           status: 200,
           data: Buffer.from('photo2'),
+        } as any)
+        .mockResolvedValue({
+          status: 200,
+          data: Buffer.from('fallback'),
         } as any);
 
-      const syncPromise = service.syncAlbumWithCache(token);
-
-      // Fast-forward through all delays
-      await jest.runAllTimersAsync();
-
-      const result = await syncPromise;
+      const result = await service.syncAlbumWithCache(token);
 
       expect(result).not.toBeNull();
       expect(result!.photos.length).toBe(2);
-    }, 10000); // Increase timeout for this complex test
+    });
   });
 });
