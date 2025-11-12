@@ -35,6 +35,9 @@ yarn-error.log*
 coverage/
 .nyc_output/
 
+# Test artifacts
+.test-cache-*
+
 # Temporary files
 tmp/
 temp/
