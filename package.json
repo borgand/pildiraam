@@ -1,6 +1,6 @@
 {
   "name": "pildiraam2",
-  "version": "1.0.0",
+  "version": "2.5.0",
   "description": "Pildiraam - iCloud Shared Album Digital Photo Frame",
   "main": "dist/backend/index.js",
   "scripts": {
