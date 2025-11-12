@@ -38,7 +38,7 @@ cat > docker-compose.yml << 'EOF'
 version: '3.8'
 services:
   pildiraam:
-    image: docker.io/YOUR_USERNAME/pildiraam:latest
+    image: docker.io/borgand/pildiraam:latest
     container_name: pildiraam
     ports:
       - "3000:3000"
